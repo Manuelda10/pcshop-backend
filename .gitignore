@@ -1,0 +1,41 @@
+# ============================================================
+# PC Store — Monorepo .gitignore raíz
+# ============================================================
+
+# ---- Variables de entorno — NUNCA commitear ----
+.env
+*.env
+!*.env.example     # sí commitear los ejemplos
+
+# ---- Binarios compilados ----
+bin/
+dist/
+*.exe
+*.out
+
+# ---- Go ----
+vendor/
+coverage.out
+coverage.html
+*.test
+
+# ---- IDE ----
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# ---- Docker ----
+# Solo ignorar overrides locales
+docker-compose.override.yml
+
+# ---- Logs locales ----
+*.log
+logs/
+
+# ---- Terraform (infra/) ----
+infra/**/.terraform/
+infra/**/terraform.tfstate
+infra/**/terraform.tfstate.backup
+infra/**/.terraform.lock.hcl
