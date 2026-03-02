@@ -1,0 +1,21 @@
+# Binarios
+bin/
+*.exe
+
+# Variables de entorno — NUNCA commitear
+.env
+
+# Dependencias descargadas
+vendor/
+
+# Archivos de IDE
+.idea/
+.vscode/
+*.swp
+
+# Cobertura de tests
+coverage.out
+coverage.html
+
+# Logs locales
+*.log
