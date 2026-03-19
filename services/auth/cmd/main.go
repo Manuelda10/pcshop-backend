@@ -3,7 +3,6 @@ package main
 import (
 	"auth-service/config"
 	httpAdapter "auth-service/internal/adapters/input/http"
-	adapterEmail "auth-service/internal/adapters/output/email"
 	adapterPostgres "auth-service/internal/adapters/output/postgres"
 	"auth-service/internal/core/services"
 	"context"
@@ -48,12 +47,17 @@ func main() {
 	log.Info("database connected", logger.Component("main"), logger.DBTable("postgres"))
 
 	// 4. Adaptadores de salida (output adapters)
+	txManager := adapterPostgres.NewTxManager(db)
 	userRepo := adapterPostgres.NewUserRepository(db)
+	userConsentRepo := adapterPostgres.NewUserConsentRepository(db)
+	userConsentStatusRepo := adapterPostgres.NewUserConsentStatusRepository(db)
 	tokenRepo := adapterPostgres.NewTokenRepository(db)
-	emailSender := adapterEmail.NewSMTPSender(cfg.Email)
+	//emailSender := adapterEmail.NewSMTPSender(cfg.Email)
 
 	// 5. Servicio de dominio (core)
-	authService := services.NewAuthService(userRepo, tokenRepo, emailSender, cfg)
+	authService := services.NewAuthService(txManager, userRepo, userConsentStatusRepo, userConsentRepo, tokenRepo, cfg)
+
+	//TODO: Crear las tablas pendientes en la base de datos. DONE
 
 	// 6. Adaptador de entrada (input adapter) — Fiber
 	app := fiber.New(fiber.Config{

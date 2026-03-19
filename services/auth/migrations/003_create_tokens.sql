@@ -14,16 +14,16 @@ CREATE TABLE refresh_tokens (
 );
 
 -- Búsqueda principal: buscar token por su hash al hacer refresh/logout
-CREATE UNIQUE INDEX idx_refresh_tokens_hash    ON refresh_tokens (token_hash);
+CREATE UNIQUE INDEX idx_refresh_tokens_hash ON refresh_tokens (token_hash);
 
 -- Útil para invalidar todos los tokens de un usuario (logout de todos los dispositivos)
-CREATE        INDEX idx_refresh_tokens_user_id ON refresh_tokens (user_id);
+CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens (user_id);
 
 -- Índice para limpiar tokens expirados con un job periódico:
 -- DELETE FROM refresh_tokens WHERE expires_at < NOW();
-CREATE        INDEX idx_refresh_tokens_expires ON refresh_tokens (expires_at);
+CREATE INDEX idx_refresh_tokens_expires ON refresh_tokens (expires_at);
 
-COMMENT ON TABLE  refresh_tokens            IS 'Refresh tokens activos por usuario. Se invalidan en logout o al rotar.';
+COMMENT ON TABLE refresh_tokens IS 'Refresh tokens activos por usuario. Se invalidan en logout o al rotar.';
 COMMENT ON COLUMN refresh_tokens.token_hash IS 'SHA-256 del token real. Nunca se almacena el token en plano.';
 
 -- -------------------------

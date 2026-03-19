@@ -5,8 +5,12 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
+// Config agrupa toda la configuración del servicio.
+// Se carga desde variables de entorno — nunca hardcodeada.
 type Config struct {
 	App    AppConfig
 	HTTP   HTTPConfig
@@ -14,6 +18,7 @@ type Config struct {
 	JWT    JWTConfig
 	Google GoogleConfig
 	Email  EmailConfig
+	Legal  LegalConfig
 }
 
 type AppConfig struct {
@@ -67,10 +72,19 @@ type EmailConfig struct {
 	FromName     string
 }
 
+type LegalConfig struct {
+	ConsentPrivacyVersion      string
+	ConsentDataCampaignVersion string
+}
+
 // Load carga la configuración desde variables de entorno.
-// Falla rápido (panic) si alguna variable crítica no está definida —
-// es mejor fallar al inicio que en medio de una petición.
+// En desarrollo lee el .env automáticamente si existe.
+// En producción las variables vienen del entorno del sistema — no hay .env.
+// Falla rápido (panic) si alguna variable crítica no está definida.
 func Load() Config {
+	// Carga el .env si existe — en producción simplemente no hace nada
+	_ = godotenv.Load()
+
 	return Config{
 		App: AppConfig{
 			Name:     getEnv("APP_NAME", "auth-service"),
@@ -108,6 +122,10 @@ func Load() Config {
 			SMTPPassword: mustGetEnv("SMTP_PASSWORD"),
 			FromAddress:  getEnv("EMAIL_FROM_ADDRESS", "no-reply@pc-store.com"),
 			FromName:     getEnv("EMAIL_FROM_NAME", "PC Store"),
+		},
+		Legal: LegalConfig{
+			ConsentPrivacyVersion:      mustGetEnv("CONSENT_PRIVACY_VERSION"),
+			ConsentDataCampaignVersion: mustGetEnv("CONSENT_DATA_CAMPAIGN_VERSION"),
 		},
 	}
 }

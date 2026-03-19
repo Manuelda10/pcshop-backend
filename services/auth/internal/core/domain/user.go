@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Provider representa el origen del registro del usuario.
 type Provider string
 
 const (
@@ -14,49 +13,67 @@ const (
 	ProviderGoogle Provider = "google"
 )
 
-// User es la entidad central del dominio de autenticación.
-// No conoce nada de base de datos, HTTP ni ningún framework.
 type User struct {
-	ID           uuid.UUID
-	Email        string
-	PasswordHash string // vacío si el proveedor es Google
-	FullName     string
-	Provider     Provider
-	ProviderID   string // Google sub ID, vacío si es local
-	IsVerified   bool
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID             uuid.UUID
+	Email          string
+	PasswordHash   string
+	FirstName      string
+	LastName       string
+	DocumentType   string
+	DocumentNumber string
+	PhoneNumber    string
+	Provider       Provider
+	ProviderID     *string
+	IsVerified     bool
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
-// NewLocalUser crea un usuario de registro manual.
-// Recibe el hash ya procesado — el hashing es responsabilidad del service.
-func NewLocalUser(email, passwordHash, fullName string) *User {
+type NewUserParams struct {
+	Email          string
+	PasswordHash   string
+	FirstName      string
+	LastName       string
+	DocumentType   string
+	DocumentNumber string
+	PhoneNumber    string
+	ProviderID     string
+}
+
+func NewLocalUser(u NewUserParams) *User {
 	now := time.Now()
 	return &User{
-		ID:           uuid.New(),
-		Email:        email,
-		PasswordHash: passwordHash,
-		FullName:     fullName,
-		Provider:     ProviderLocal,
-		IsVerified:   false, // requiere verificación de email
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:             uuid.New(),
+		Email:          u.Email,
+		PasswordHash:   u.PasswordHash,
+		FirstName:      u.FirstName,
+		LastName:       u.LastName,
+		DocumentType:   u.DocumentType,
+		DocumentNumber: u.DocumentNumber,
+		PhoneNumber:    u.PhoneNumber,
+		Provider:       ProviderLocal,
+		IsVerified:     false,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 }
 
-// NewGoogleUser crea un usuario proveniente de OAuth2 con Google.
-// Se marca como verificado porque Google ya validó el email.
-func NewGoogleUser(email, fullName, providerID string) *User {
+func NewGoogleUser(u NewUserParams) *User {
 	now := time.Now()
 	return &User{
-		ID:         uuid.New(),
-		Email:      email,
-		FullName:   fullName,
-		Provider:   ProviderGoogle,
-		ProviderID: providerID,
-		IsVerified: true, // Google garantiza que el email es válido
-		CreatedAt:  now,
-		UpdatedAt:  now,
+		ID:             uuid.New(),
+		Email:          u.Email,
+		PasswordHash:   u.PasswordHash,
+		FirstName:      u.FirstName,
+		LastName:       u.LastName,
+		DocumentType:   u.DocumentType,
+		DocumentNumber: u.DocumentNumber,
+		PhoneNumber:    u.PhoneNumber,
+		Provider:       ProviderGoogle,
+		ProviderID:     &u.ProviderID,
+		IsVerified:     true,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 }
 

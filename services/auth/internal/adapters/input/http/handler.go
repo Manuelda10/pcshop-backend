@@ -63,14 +63,24 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	}
 
 	log.Debug("handler received register request", logger.Input(map[string]string{
-		"email":    req.Email,
-		"fullName": req.FullName,
+		"email":          req.Email,
+		"documentNumber": req.DocumentNumber,
+		"ip_address":     c.IP(),
 	}))
 
 	user, err := h.service.Register(c.UserContext(), input.RegisterCommand{
-		Email:    req.Email,
-		Password: req.Password,
-		FullName: req.FullName,
+		Email:          req.Email,
+		Password:       req.Password,
+		FirstName:      req.FirstName,
+		LastName:       req.LastName,
+		DocumentType:   req.DocumentType,
+		DocumentNumber: req.DocumentNumber,
+		PhoneNumber:    req.PhoneNumber,
+		Consents: input.ConsentsCommand{
+			PrivacyPolicy: req.Consents.PrivacyPolicy,
+			DataCampaign:  req.Consents.DataCampaign,
+		},
+		IPAddress: c.IP(),
 	})
 	if err != nil {
 		return h.handleServiceError(c, err)
@@ -80,6 +90,7 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(dto.ToUserResponse(user))
 }
 
+/*
 // -------------------------
 // VerifyEmail
 // -------------------------
@@ -329,6 +340,7 @@ func (h *AuthHandler) Me(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(dto.ToUserResponse(user))
 }
 
+*/
 // -------------------------
 // Error mapper
 // -------------------------

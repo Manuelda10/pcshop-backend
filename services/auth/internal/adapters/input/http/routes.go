@@ -16,7 +16,7 @@ func RegisterRoutes(app *fiber.App, handler *AuthHandler, cfg config.Config) {
 
 	// Rutas públicas — no requieren JWT
 	auth.Post("/register", handler.Register)
-	auth.Post("/verify-email", handler.VerifyEmail)
+	/*auth.Post("/verify-email", handler.VerifyEmail)
 	auth.Post("/login", handler.Login)
 	auth.Post("/logout", handler.Logout)
 	auth.Post("/refresh", handler.RefreshToken)
@@ -27,7 +27,7 @@ func RegisterRoutes(app *fiber.App, handler *AuthHandler, cfg config.Config) {
 
 	// Rutas protegidas — requieren JWT válido
 	protected := auth.Group("", JWTMiddleware(cfg.JWT.AccessSecret))
-	protected.Get("/me", handler.Me)
+	protected.Get("/me", handler.Me)*/
 }
 
 // JWTMiddleware valida el access token en el header Authorization.

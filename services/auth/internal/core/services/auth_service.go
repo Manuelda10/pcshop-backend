@@ -9,37 +9,45 @@ import (
 	crand "crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/Manuelda10/pcshop-backend/shared/logger"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // authService implementa input.AuthService.
 // Solo conoce los ports de output — nunca los adaptadores concretos.
 type authService struct {
-	userRepo    output.UserRepository
-	tokenRepo   output.TokenRepository
-	emailSender output.EmailSender
-	cfg         config.Config
+	txManager         output.TxManager
+	userRepo          output.UserRepository
+	consentStatusRepo output.UserConsentStatusRepository
+	consentRepo       output.UserConsentRepository
+	tokenRepo         output.TokenRepository
+	//emailSender       output.EmailSender
+	cfg config.Config
 }
 
-// NewAuthService construye el servicio con sus dependencias inyectadas.
 func NewAuthService(
+	txManager output.TxManager,
 	userRepo output.UserRepository,
+	consentStatusRepo output.UserConsentStatusRepository,
+	consentRepo output.UserConsentRepository,
 	tokenRepo output.TokenRepository,
-	emailSender output.EmailSender,
+	//emailSender output.EmailSender,
 	cfg config.Config,
 ) input.AuthService {
 	return &authService{
-		userRepo:    userRepo,
-		tokenRepo:   tokenRepo,
-		emailSender: emailSender,
-		cfg:         cfg,
+		txManager:         txManager,
+		userRepo:          userRepo,
+		consentStatusRepo: consentStatusRepo,
+		consentRepo:       consentRepo,
+		tokenRepo:         tokenRepo,
+		//emailSender:       emailSender,
+		cfg: cfg,
 	}
 }
 
@@ -56,9 +64,8 @@ func (s *authService) Register(ctx context.Context, cmd input.RegisterCommand) (
 
 	log.Debug("registering new user")
 
-	// Verificar que el email no esté en uso
 	existing, err := s.userRepo.FindByEmail(ctx, cmd.Email)
-	if err != nil && err != domain.ErrUserNotFound {
+	if err != nil && !errors.Is(err, domain.ErrUserNotFound) {
 		log.Error("failed to check existing email", logger.Err(err))
 		return nil, domain.ErrInternalServer
 	}
@@ -67,7 +74,6 @@ func (s *authService) Register(ctx context.Context, cmd input.RegisterCommand) (
 		return nil, domain.ErrUserAlreadyExists
 	}
 
-	// Hashear contraseña
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(cmd.Password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Error("failed to hash password", logger.Err(err))
@@ -75,12 +81,60 @@ func (s *authService) Register(ctx context.Context, cmd input.RegisterCommand) (
 	}
 
 	// Crear entidad de dominio
-	user := domain.NewLocalUser(cmd.Email, string(passwordHash), cmd.FullName)
+	user := domain.NewLocalUser(domain.NewUserParams{
+		Email:          cmd.Email,
+		PasswordHash:   string(passwordHash),
+		FirstName:      cmd.FirstName,
+		LastName:       cmd.LastName,
+		DocumentType:   cmd.DocumentType,
+		DocumentNumber: cmd.DocumentNumber,
+		PhoneNumber:    cmd.PhoneNumber,
+	})
+	userConsentStatus := domain.NewUserConsentStatus(user.ID, cmd.Consents.PrivacyPolicy, cmd.Consents.DataCampaign)
+	consentHistory := []*domain.UserConsent{
+		domain.NewUserConsent(domain.NewUserConsentParams{
+			UserID:    user.ID,
+			Type:      domain.ConsentPrivacyPolicy,
+			Accepted:  cmd.Consents.PrivacyPolicy,
+			Version:   s.cfg.Legal.ConsentPrivacyVersion,
+			IPAddress: cmd.IPAddress,
+		}),
+		domain.NewUserConsent(domain.NewUserConsentParams{
+			UserID:    user.ID,
+			Type:      domain.ConsentDataCampaign,
+			Accepted:  cmd.Consents.DataCampaign,
+			Version:   s.cfg.Legal.ConsentDataCampaignVersion,
+			IPAddress: cmd.IPAddress,
+		}),
+	}
 
-	// Persistir
-	saved, err := s.userRepo.Save(ctx, user)
+	var saved *domain.User
+
+	err = s.txManager.RunInTx(ctx, func(ctx context.Context) error {
+		var err error
+
+		saved, err = s.userRepo.Save(ctx, user)
+		if err != nil {
+			log.Error("failed to save user", logger.Err(err))
+			return err
+		}
+
+		_, err = s.consentStatusRepo.Save(ctx, userConsentStatus)
+		if err != nil {
+			log.Error("failed to save consent status", logger.Err(err))
+			return err
+		}
+
+		for _, consent := range consentHistory {
+			_, err = s.consentRepo.Save(ctx, consent)
+			if err != nil {
+				log.Error("failed to save consent history", logger.Err(err))
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		log.Error("failed to save user", logger.Err(err))
 		return nil, domain.ErrInternalServer
 	}
 
@@ -90,6 +144,8 @@ func (s *authService) Register(ctx context.Context, cmd input.RegisterCommand) (
 		log.Error("failed to generate verification code", logger.Err(err))
 		return nil, domain.ErrInternalServer
 	}
+	//TODO: Eliminar cuando se implemente el envío de correo
+	log.Info("otp code sent", logger.Input(code))
 
 	ev := domain.NewEmailVerification(saved.ID, codeHash)
 	if err := s.tokenRepo.SaveEmailVerification(ctx, ev); err != nil {
@@ -97,10 +153,11 @@ func (s *authService) Register(ctx context.Context, cmd input.RegisterCommand) (
 		return nil, domain.ErrInternalServer
 	}
 
-	// Enviar email (no bloqueante — si falla loguea pero no rompe el registro)
-	if err := s.emailSender.SendVerificationEmail(ctx, saved.Email, saved.FullName, code); err != nil {
-		log.Warn("failed to send verification email — user registered but email not sent", logger.Err(err))
-	}
+	// Enviar email (no bloqueante — si falla loguea pero no rompe el registro) Comentado hasta implementación correcta.
+	/*
+		if err := s.emailSender.SendVerificationEmail(ctx, saved.Email, saved.FullName, code); err != nil {
+			log.Warn("failed to send verification email — user registered but email not sent", logger.Err(err))
+		}*/
 
 	log.Info("user registered successfully", logger.UserID(saved.ID.String()))
 	return saved, nil
@@ -109,7 +166,7 @@ func (s *authService) Register(ctx context.Context, cmd input.RegisterCommand) (
 // -------------------------
 // VerifyEmail
 // -------------------------
-
+/*
 func (s *authService) VerifyEmail(ctx context.Context, cmd input.VerifyEmailCommand) error {
 	log := logger.FromContext(ctx).With(
 		logger.Layer("service"),
@@ -326,7 +383,7 @@ func (s *authService) Me(ctx context.Context, userID string) (*domain.User, erro
 
 	log.Debug("user fetched", logger.Output(map[string]string{"email": user.Email}))
 	return user, nil
-}
+}*/
 
 // -------------------------
 // Helpers privados

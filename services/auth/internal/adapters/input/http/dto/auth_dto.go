@@ -7,9 +7,19 @@ import "auth-service/internal/core/domain"
 // -------------------------
 
 type RegisterRequest struct {
-	Email    string `json:"email"    validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8"`
-	FullName string `json:"fullName" validate:"required,min=2"`
+	Email          string          `json:"email"              validate:"required,email"`
+	Password       string          `json:"password"           validate:"required,min=8"`
+	FirstName      string          `json:"firstName"          validate:"required,min=2"`
+	LastName       string          `json:"lastName"           validate:"required,min=2"`
+	DocumentType   string          `json:"documentType"       validate:"required,min=2,max=3"`
+	DocumentNumber string          `json:"documentNumber"           validate:"required,min=8,max=12"`
+	PhoneNumber    string          `json:"phoneNumber"        validate:"required,len=9"`
+	Consents       ConsentsRequest `json:"consents"           validate:"required"`
+}
+
+type ConsentsRequest struct {
+	PrivacyPolicy bool `json:"privacyPolicy" validate:"required,eq=true"`
+	DataCampaign  bool `json:"dataCampaign"`
 }
 
 type VerifyEmailRequest struct {
@@ -68,7 +78,7 @@ func ToUserResponse(u *domain.User) UserResponse {
 	return UserResponse{
 		ID:         u.ID.String(),
 		Email:      u.Email,
-		FullName:   u.FullName,
+		FullName:   u.FirstName + " " + u.LastName,
 		Provider:   string(u.Provider),
 		IsVerified: u.IsVerified,
 		CreatedAt:  u.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
