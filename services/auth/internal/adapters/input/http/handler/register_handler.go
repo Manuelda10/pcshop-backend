@@ -1,65 +1,33 @@
-package http
+package handler
 
 import (
-	"auth-service/config"
-	"auth-service/internal/adapters/input/http/dto"
-	"auth-service/internal/core/domain"
-	"auth-service/internal/core/ports/input"
-	"errors"
+	"auth/internal/adapters/input/http/dto"
+	"auth/internal/core/ports/input"
 
+	sharedhttp "github.com/Manuelda10/pcshop-backend/shared/http"
 	"github.com/Manuelda10/pcshop-backend/shared/logger"
+	"github.com/Manuelda10/pcshop-backend/shared/validation"
 	"github.com/gofiber/fiber/v2"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 )
 
-// AuthHandler contiene los handlers HTTP para el servicio de autenticación.
-// Solo conoce el port de entrada (input.AuthService) — nunca la implementación.
-type AuthHandler struct {
-	service      input.AuthService
-	googleConfig *oauth2.Config
+type RegisterHandler struct {
+	Base
+	service input.AuthService
 }
 
-// NewAuthHandler construye el handler con sus dependencias.
-func NewAuthHandler(service input.AuthService, cfg config.Config) *AuthHandler {
-	googleCfg := &oauth2.Config{
-		ClientID:     cfg.Google.ClientID,
-		ClientSecret: cfg.Google.ClientSecret,
-		RedirectURL:  cfg.Google.RedirectURL,
-		Scopes:       []string{"openid", "email", "profile"},
-		Endpoint:     google.Endpoint,
-	}
-
-	return &AuthHandler{
-		service:      service,
-		googleConfig: googleCfg,
+func NewRegisterHandler(service input.AuthService, v *validation.Validator) *RegisterHandler {
+	return &RegisterHandler{
+		Base:    Base{Validator: v},
+		service: service,
 	}
 }
 
-// -------------------------
-// Register
-// -------------------------
-
-// Register godoc
-// @Summary      Registro de nuevo usuario
-// @Tags         auth
-// @Accept       json
-// @Produce      json
-// @Param        body body dto.RegisterRequest true "Datos de registro"
-// @Success      201  {object} dto.UserResponse
-// @Failure      400  {object} dto.ErrorResponse
-// @Failure      409  {object} dto.ErrorResponse
-// @Router       /auth/register [post]
-func (h *AuthHandler) Register(c *fiber.Ctx) error {
+func (h *RegisterHandler) Handle(c *fiber.Ctx) error {
 	log := logger.FromCtx(c).With(logger.Operation("register"))
 
 	var req dto.RegisterRequest
-	if err := c.BodyParser(&req); err != nil {
-		log.Warn("invalid request body", logger.Err(err))
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{
-			Error: "invalid request body",
-			Code:  "INVALID_BODY",
-		})
+	if failed := parseAndValidate(c, &h.Base, &req); failed {
+		return nil
 	}
 
 	log.Debug("handler received register request", logger.Input(map[string]string{
@@ -83,11 +51,11 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		IPAddress: c.IP(),
 	})
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return handleServiceError(c, err)
 	}
 
 	log.Info("register handler completed", logger.UserID(user.ID.String()))
-	return c.Status(fiber.StatusCreated).JSON(dto.ToUserResponse(user))
+	return sharedhttp.Created(c, CodeUserCreated, "Usuario creado exitosamente", dto.ToUserResponse(user))
 }
 
 /*
@@ -344,45 +312,3 @@ func (h *AuthHandler) Me(c *fiber.Ctx) error {
 // -------------------------
 // Error mapper
 // -------------------------
-
-// handleServiceError mapea los errores de dominio a respuestas HTTP apropiadas.
-// Centralizado aquí para no repetir lógica en cada handler.
-func (h *AuthHandler) handleServiceError(c *fiber.Ctx, err error) error {
-	log := logger.FromCtx(c)
-
-	switch {
-	case errors.Is(err, domain.ErrUserNotFound):
-		return c.Status(fiber.StatusNotFound).JSON(dto.ErrorResponse{Error: err.Error(), Code: "USER_NOT_FOUND"})
-
-	case errors.Is(err, domain.ErrUserAlreadyExists):
-		return c.Status(fiber.StatusConflict).JSON(dto.ErrorResponse{Error: err.Error(), Code: "USER_ALREADY_EXISTS"})
-
-	case errors.Is(err, domain.ErrInvalidCredentials):
-		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{Error: err.Error(), Code: "INVALID_CREDENTIALS"})
-
-	case errors.Is(err, domain.ErrEmailNotVerified):
-		return c.Status(fiber.StatusForbidden).JSON(dto.ErrorResponse{Error: err.Error(), Code: "EMAIL_NOT_VERIFIED"})
-
-	case errors.Is(err, domain.ErrInvalidToken),
-		errors.Is(err, domain.ErrTokenNotFound):
-		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{Error: err.Error(), Code: "INVALID_TOKEN"})
-
-	case errors.Is(err, domain.ErrExpiredToken):
-		return c.Status(fiber.StatusUnauthorized).JSON(dto.ErrorResponse{Error: err.Error(), Code: "TOKEN_EXPIRED"})
-
-	case errors.Is(err, domain.ErrInvalidVerificationCode),
-		errors.Is(err, domain.ErrExpiredVerificationCode),
-		errors.Is(err, domain.ErrVerificationCodeNotFound):
-		return c.Status(fiber.StatusBadRequest).JSON(dto.ErrorResponse{Error: err.Error(), Code: "INVALID_VERIFICATION_CODE"})
-
-	case errors.Is(err, domain.ErrProviderMismatch):
-		return c.Status(fiber.StatusConflict).JSON(dto.ErrorResponse{Error: err.Error(), Code: "PROVIDER_MISMATCH"})
-
-	default:
-		log.Error("unhandled service error", logger.Err(err))
-		return c.Status(fiber.StatusInternalServerError).JSON(dto.ErrorResponse{
-			Error: "internal server error",
-			Code:  "INTERNAL_ERROR",
-		})
-	}
-}

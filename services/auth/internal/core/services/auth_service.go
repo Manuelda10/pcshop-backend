@@ -1,10 +1,10 @@
 package services
 
 import (
-	"auth-service/config"
-	"auth-service/internal/core/domain"
-	"auth-service/internal/core/ports/input"
-	"auth-service/internal/core/ports/output"
+	"auth/config"
+	"auth/internal/core/domain"
+	"auth/internal/core/ports/input"
+	"auth/internal/core/ports/output"
 	"context"
 	crand "crypto/rand"
 	"crypto/sha256"
@@ -71,7 +71,7 @@ func (s *authService) Register(ctx context.Context, cmd input.RegisterCommand) (
 	}
 	if existing != nil {
 		log.Warn("email already registered")
-		return nil, domain.ErrUserAlreadyExists
+		return nil, domain.ErrEmailAlreadyExists
 	}
 
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(cmd.Password), bcrypt.DefaultCost)

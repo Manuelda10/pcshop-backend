@@ -1,7 +1,7 @@
 package input
 
 import (
-	"auth-service/internal/core/domain"
+	"auth/internal/core/domain"
 	"context"
 )
 

@@ -12,10 +12,12 @@ import "errors"
 
 var (
 	// Usuario
-	ErrUserNotFound       = errors.New("user not found")
-	ErrUserAlreadyExists  = errors.New("user already exists with this email")
-	ErrEmailNotVerified   = errors.New("email not verified — check your inbox")
-	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrUserNotFound          = errors.New("user not found")
+	ErrEmailAlreadyExists    = errors.New("email already registered")
+	ErrDocumentAlreadyExists = errors.New("document already registered")
+	ErrUserAlreadyExists     = errors.New("user already exists with this email")
+	ErrEmailNotVerified      = errors.New("email not verified — check your inbox")
+	ErrInvalidCredentials    = errors.New("invalid email or password")
 
 	// Tokens
 	ErrInvalidToken  = errors.New("invalid or malformed token")

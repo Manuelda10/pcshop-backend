@@ -1,8 +1,9 @@
 package http
 
 import (
-	"auth-service/config"
-	"auth-service/internal/adapters/input/http/dto"
+	"auth/config"
+	"auth/internal/adapters/input/http/dto"
+	"auth/internal/adapters/input/http/handler"
 	"strings"
 
 	"github.com/Manuelda10/pcshop-backend/shared/logger"
@@ -10,24 +11,24 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// RegisterRoutes registra todas las rutas del servicio de auth en la app de Fiber.
-func RegisterRoutes(app *fiber.App, handler *AuthHandler, cfg config.Config) {
+type Handlers struct {
+	Register *handler.RegisterHandler
+	// Login       *handler.LoginHandler       ← futuro
+	// Refresh     *handler.RefreshHandler      ← futuro
+}
+
+func RegisterRoutes(app *fiber.App, h Handlers, cfg config.Config) {
 	auth := app.Group("/auth")
 
-	// Rutas públicas — no requieren JWT
-	auth.Post("/register", handler.Register)
-	/*auth.Post("/verify-email", handler.VerifyEmail)
-	auth.Post("/login", handler.Login)
-	auth.Post("/logout", handler.Logout)
-	auth.Post("/refresh", handler.RefreshToken)
+	auth.Post("/register", h.Register.Handle)
 
-	// Google OAuth2
-	auth.Get("/google", handler.GoogleLogin)
-	auth.Get("/google/callback", handler.GoogleCallback)
+	// OAuth
+	//auth.Get("/google/login", h.GoogleOAuth.Login)
+	//auth.Get("/google/callback", h.GoogleOAuth.Callback)
 
-	// Rutas protegidas — requieren JWT válido
-	protected := auth.Group("", JWTMiddleware(cfg.JWT.AccessSecret))
-	protected.Get("/me", handler.Me)*/
+	// Futuro:
+	// auth.Post("/login", h.Login.Handle)
+	// auth.Post("/refresh", h.Refresh.Handle)
 }
 
 // JWTMiddleware valida el access token en el header Authorization.

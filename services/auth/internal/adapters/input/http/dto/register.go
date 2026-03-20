@@ -1,24 +1,24 @@
 package dto
 
-import "auth-service/internal/core/domain"
+import "auth/internal/core/domain"
 
 // -------------------------
 // Requests
 // -------------------------
 
 type RegisterRequest struct {
-	Email          string          `json:"email"              validate:"required,email"`
-	Password       string          `json:"password"           validate:"required,min=8"`
-	FirstName      string          `json:"firstName"          validate:"required,min=2"`
-	LastName       string          `json:"lastName"           validate:"required,min=2"`
-	DocumentType   string          `json:"documentType"       validate:"required,min=2,max=3"`
-	DocumentNumber string          `json:"documentNumber"           validate:"required,min=8,max=12"`
-	PhoneNumber    string          `json:"phoneNumber"        validate:"required,len=9"`
-	Consents       ConsentsRequest `json:"consents"           validate:"required"`
+	Email          string          `json:"email"          validate:"required,email"`
+	Password       string          `json:"password"       validate:"required,strong_password"`
+	FirstName      string          `json:"firstName"      validate:"required,min=2"`
+	LastName       string          `json:"lastName"       validate:"required,min=2"`
+	DocumentType   string          `json:"documentType"   validate:"required,document_type"`
+	DocumentNumber string          `json:"documentNumber" validate:"required,document_number"`
+	PhoneNumber    string          `json:"phoneNumber"    validate:"required,phone_pe"`
+	Consents       ConsentsRequest `json:"consents"       validate:"required"`
 }
 
 type ConsentsRequest struct {
-	PrivacyPolicy bool `json:"privacyPolicy" validate:"required,eq=true"`
+	PrivacyPolicy bool `json:"privacyPolicy" validate:"privacy_accepted"`
 	DataCampaign  bool `json:"dataCampaign"`
 }
 

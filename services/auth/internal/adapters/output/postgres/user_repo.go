@@ -1,8 +1,8 @@
 package postgres
 
 import (
-	"auth-service/internal/core/domain"
-	"auth-service/internal/core/ports/output"
+	"auth/internal/core/domain"
+	"auth/internal/core/ports/output"
 	"context"
 	"errors"
 

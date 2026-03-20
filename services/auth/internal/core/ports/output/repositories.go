@@ -1,7 +1,7 @@
 package output
 
 import (
-	"auth-service/internal/core/domain"
+	"auth/internal/core/domain"
 	"context"
 )
 
@@ -36,26 +36,26 @@ type TokenRepository interface {
 	SaveRefreshToken(ctx context.Context, token *domain.RefreshToken) error
 
 	/*
-	// FindRefreshToken busca un refresh token por su hash.
-	FindRefreshToken(ctx context.Context, tokenHash string) (*domain.RefreshToken, error)
+		// FindRefreshToken busca un refresh token por su hash.
+		FindRefreshToken(ctx context.Context, tokenHash string) (*domain.RefreshToken, error)
 
-	// DeleteRefreshToken elimina un refresh token (logout).
-	DeleteRefreshToken(ctx context.Context, tokenHash string) error
+		// DeleteRefreshToken elimina un refresh token (logout).
+		DeleteRefreshToken(ctx context.Context, tokenHash string) error
 
-	// DeleteAllUserRefreshTokens elimina todos los tokens de un usuario.
-	// Útil para "cerrar todas las sesiones".
-	DeleteAllUserRefreshTokens(ctx context.Context, userID uuid.UUID) error
+		// DeleteAllUserRefreshTokens elimina todos los tokens de un usuario.
+		// Útil para "cerrar todas las sesiones".
+		DeleteAllUserRefreshTokens(ctx context.Context, userID uuid.UUID) error
 	*/
 	// SaveEmailVerification persiste un código de verificación de email.
 	SaveEmailVerification(ctx context.Context, ev *domain.EmailVerification) error
 
 	/*
-	// FindEmailVerification busca un código de verificación por userID.
-	FindEmailVerification(ctx context.Context, userID uuid.UUID) (*domain.EmailVerification, error)
+		// FindEmailVerification busca un código de verificación por userID.
+		FindEmailVerification(ctx context.Context, userID uuid.UUID) (*domain.EmailVerification, error)
 
-	// DeleteEmailVerification elimina el código tras verificación exitosa.
-	DeleteEmailVerification(ctx context.Context, userID uuid.UUID) error
-	 */
+		// DeleteEmailVerification elimina el código tras verificación exitosa.
+		DeleteEmailVerification(ctx context.Context, userID uuid.UUID) error
+	*/
 }
 
 type EmailSender interface {

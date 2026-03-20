@@ -1,10 +1,12 @@
 package main
 
 import (
-	"auth-service/config"
-	httpAdapter "auth-service/internal/adapters/input/http"
-	adapterPostgres "auth-service/internal/adapters/output/postgres"
-	"auth-service/internal/core/services"
+	"auth/config"
+	httpAdapter "auth/internal/adapters/input/http"
+	"auth/internal/adapters/input/http/handler"
+	authvalidation "auth/internal/adapters/input/http/validation"
+	adapterPostgres "auth/internal/adapters/output/postgres"
+	"auth/internal/core/services"
 	"context"
 	"fmt"
 	"os"
@@ -57,7 +59,12 @@ func main() {
 	// 5. Servicio de dominio (core)
 	authService := services.NewAuthService(txManager, userRepo, userConsentStatusRepo, userConsentRepo, tokenRepo, cfg)
 
-	//TODO: Crear las tablas pendientes en la base de datos. DONE
+	validator := authvalidation.NewAuthValidator()
+
+	// 7. Handlers (cada uno recibe solo lo que necesita)
+	handlers := httpAdapter.Handlers{
+		Register: handler.NewRegisterHandler(authService, validator),
+	}
 
 	// 6. Adaptador de entrada (input adapter) — Fiber
 	app := fiber.New(fiber.Config{
@@ -80,8 +87,7 @@ func main() {
 	app.Use(logger.FiberMiddleware(log))
 
 	// Rutas
-	handler := httpAdapter.NewAuthHandler(authService, cfg)
-	httpAdapter.RegisterRoutes(app, handler, cfg)
+	httpAdapter.RegisterRoutes(app, handlers, cfg)
 
 	// Healthcheck
 	app.Get("/health", func(c *fiber.Ctx) error {
